@@ -1,0 +1,114 @@
+version: '3'
+
+services:
+  redis-master:
+    container_name: "redis-master"
+    image: redis
+    ports:
+      - "6380:6380"
+    command: "redis-server /etc/redis-config/redis.conf"
+    networks:
+      frontend:
+        ipv4_address: 10.5.0.2
+    volumes:
+      - "./master/data:/data/"
+      - "./master/conf:/etc/redis-config"
+  redis-repl1:
+    container_name: "redis-repl1"
+    image: redis
+    ports:
+      - "6381:6381"
+    command: "redis-server /etc/redis-config/redis.conf"
+    networks:
+      frontend:
+        ipv4_address: 10.5.0.3
+    volumes:
+      - "./repl1/data:/data/"
+      - "./repl1/conf:/etc/redis-config"
+  redis-repl2:
+    container_name: "redis-repl2"
+    image: redis
+    ports:
+      - "6382:6382"
+    command: "redis-server /etc/redis-config/redis.conf"
+    networks:
+      frontend:
+        ipv4_address: 10.5.0.4
+    volumes:
+      - "./repl2/data:/data/"
+      - "./repl2/conf:/etc/redis-config"  
+  redis-sentinel1:
+    container_name: "redis-sentinel1"
+    image: redis
+    ports:
+      - "26380:26380"
+    command: "redis-server /etc/redis-config/redis.conf --sentinel"
+    volumes:
+      - "./sentinel1/conf:/etc/redis-config"
+    networks:
+      frontend:
+        ipv4_address: 10.5.0.5
+    depends_on:
+      - redis-master
+      - redis-repl1
+      - redis-repl2
+  redis-sentinel2:
+    container_name: "redis-sentinel2"
+    image: redis
+    ports:
+      - "26381:26381"
+    command: "redis-server /etc/redis-config/redis.conf --sentinel"
+    volumes:
+      - "./sentinel2/conf:/etc/redis-config"
+    networks:
+      frontend:
+        ipv4_address: 10.5.0.6
+    depends_on:
+      - redis-master
+      - redis-repl1
+      - redis-repl2
+  redis-sentinel3:
+    container_name: "redis-sentinel3"
+    image: redis
+    ports:
+      - "26382:26382"
+    command: "redis-server /etc/redis-config/redis.conf --sentinel"
+    volumes:
+      - "./sentinel3/conf:/etc/redis-config"
+    networks:
+      frontend:
+        ipv4_address: 10.5.0.7
+    depends_on:
+      - redis-master
+      - redis-repl1
+      - redis-repl2
+  client:
+    container_name: "client"
+    build: .
+    networks:
+      frontend:
+        ipv4_address: 10.5.0.8
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis-master
+      - redis-repl1
+      - redis-repl2
+      - redis-sentinel1
+      - redis-sentinel2
+      - redis-sentinel3
+    links:
+      - redis-master
+      - redis-repl1
+      - redis-repl2
+      - redis-sentinel1
+      - redis-sentinel2
+      - redis-sentinel3
+
+networks:
+  frontend:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 10.5.0.0/16
+         gateway: 10.5.0.1
